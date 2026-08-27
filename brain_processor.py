@@ -20,13 +20,14 @@ VISION_PROJECTOR = "models/mmproj-qwen2-vl-2b-instruct-f16.gguf"
 IMAGE_THRESHOLD = 3  
 
 # --- 2. LOAD QWEN-VL AI ---
-print("[*] Loading Qwen2-VL Brain... This might take a minute...")
+print("[*] Loading Qwen2-VL... This might take a minute...")
 chat_handler = Llava15ChatHandler(clip_model_path=VISION_PROJECTOR)
 llm = Llama(
     model_path=MAIN_MODEL,
     chat_handler=chat_handler,
     n_ctx=4096, # Memory for understanding the image
-    verbose=False
+    n_gpu_layers=-1,
+    verbose=True
 )
 print("[+] AI Brain Loaded Successfully!")
 
