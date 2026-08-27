@@ -79,38 +79,55 @@ def process_batch():
         
         prompt = f"Look at this screenshot of '{app_name}'. The user clicked at X: {x}, Y: {y}. Briefly describe what UI element (button/menu/field) is at that location."
         
+
+        
+        # 1. STRICT PROMPT TO PREVENT VERBOSE ANSWERS
         payload = {
             "messages": [
                 {
+                    "role": "system",
+                    "content": "You are an expert UI identifier. Reply with ONLY the element name in 1 to 3 words (e.g., 'Open Button', 'File Menu'). NO explanations. NO full sentences."
+                },
+                {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": prompt},
+                        {"type": "text", "text": f"App: '{app_name}'. User clicked at X: {x}, Y: {y}. Name the exact UI element."},
                         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
                     ]
                 }
-            ]
+            ],
+            "temperature": 0.1, # Forces AI to be highly factual and robotic
+            "max_tokens": 10    # Prevents long paragraphs
         }
 
         try:
             print(f"-> Sending {log['screenshot']} to Llama Server...")
-            
-            # Sending request to the server
             response = requests.post(SERVER_URL, json=payload)
-            response.raise_for_status() # Check for HTTP errors
+            response.raise_for_status()
             
             ai_description = response.json()['choices'][0]['message']['content'].strip()
             print(f"   [AI Learned]: {ai_description}")
 
-            # Save to SQLite Database
-            c.execute("INSERT INTO learned_rules (app_name, context_description, action_taken, x_coord, y_coord, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
-                      (app_name, ai_description, log['action'], x, y, timestamp))
+            # 2. DUPLICATE CHECK LOGIC (20 Pixel Radius)
+            c.execute('''SELECT id, context_description FROM learned_rules 
+                         WHERE app_name = ? 
+                         AND abs(x_coord - ?) < 20 
+                         AND abs(y_coord - ?) < 20''', (app_name, x, y))
+            
+            existing_rule = c.fetchone()
+            
+            if existing_rule:
+                print(f"   [!] Already nercheskunna (Match ID: {existing_rule[0]} - {existing_rule[1]}). Skipping DB insert.")
+            else:
+                c.execute("INSERT INTO learned_rules (app_name, context_description, action_taken, x_coord, y_coord, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+                          (app_name, ai_description, log['action'], x, y, timestamp))
+                print("   [+] Saved to Database.")
             
             # Delete image to save space
             os.remove(img_path)
             
         except Exception as e:
             print(f"[!] Error processing image: {e}")
-            # If server fails, keep the log for later
             logs_to_keep.append(log)
 
     conn.commit()
