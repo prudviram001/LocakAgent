@@ -83,6 +83,10 @@ def process_batch():
             app_name = raw_app_name.split("\\")[-1].strip()
         else:
             app_name = raw_app_name.strip()
+
+        x = log['details'].get('x', 0)
+        y = log['details'].get('y', 0)
+        timestamp = log['timestamp']
         
         prompt = f"Look at this screenshot of '{app_name}'. The user clicked at X: {x}, Y: {y}. Briefly describe what UI element (button/menu/field) is at that location."
         
