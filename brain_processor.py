@@ -67,10 +67,12 @@ def process_batch():
             logs = json.load(f)
     except (json.JSONDecodeError, FileNotFoundError):
         logs = []
+    MAX_PROCESS = 3
+    logs_to_process = logs[:MAX_PROCESS]
+    
+    logs_to_keep = logs[MAX_PROCESS:]
 
-    logs_to_keep = []
-
-    for log in logs:
+    for log in logs_to_process:
         img_path = os.path.join(MEMORY_DIR, log['screenshot'])
         if not os.path.exists(img_path):
             logs_to_keep.append(log) 
