@@ -72,10 +72,18 @@ def process_batch():
             continue
 
         base64_image = image_to_base64(img_path)
-        app_name = log['window']
-        x = log['details'].get('x', 0)
-        y = log['details'].get('y', 0)
-        timestamp = log['timestamp']
+        
+        # --- APP NAME CLEANING (Normalization) ---
+        raw_app_name = log['window']
+        if " - " in raw_app_name:
+            # "D:\Test - File Explorer" unte, last lo unna "File Explorer" ni matrame theeskuntundi
+            app_name = raw_app_name.split(" - ")[-1].strip()
+        elif "\\" in raw_app_name:
+            # Path laaga unte last folder peru theeskuntundi
+            app_name = raw_app_name.split("\\")[-1].strip()
+        else:
+            app_name = raw_app_name.strip()
+        ------------------------------------------
         
         prompt = f"Look at this screenshot of '{app_name}'. The user clicked at X: {x}, Y: {y}. Briefly describe what UI element (button/menu/field) is at that location."
         
