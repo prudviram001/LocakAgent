@@ -4,34 +4,18 @@ import time
 import sqlite3
 import base64
 import glob
-from llama_cpp import Llama
-from llama_cpp.llama_chat_format import Llava15ChatHandler
+import requests # Kothaga idhi kavali
 
 # --- 1. CONFIGURATION ---
 MEMORY_DIR = "agent_memory"
 LOG_FILE = os.path.join(MEMORY_DIR, "behavior_log.json")
 DB_NAME = "core_integrator.db"
+IMAGE_THRESHOLD = 3
 
-# Nuvvu download chesina Qwen Models Paths
-MAIN_MODEL = "models/qwen2-vl-2b-instruct-q4_k_m.gguf"
-VISION_PROJECTOR = "models/mmproj-qwen2-vl-2b-instruct-f16.gguf"
+# Llama.cpp Server URL
+SERVER_URL = "http://127.0.0.1:8080/v1/chat/completions"
 
-# Enni images vachaka AI process cheyali? (Testing kosam 3 peduthunna)
-IMAGE_THRESHOLD = 3  
-
-# --- 2. LOAD QWEN-VL AI ---
-print("[*] Loading Qwen2-VL... This might take a minute...")
-chat_handler = Llava15ChatHandler(clip_model_path=VISION_PROJECTOR)
-llm = Llama(
-    model_path=MAIN_MODEL,
-    chat_handler=chat_handler,
-    n_ctx=4096, # Memory for understanding the image
-    n_gpu_layers=-1,
-    verbose=True
-)
-print("[+] AI Brain Loaded Successfully!")
-
-# --- 3. DATABASE SETUP ---
+# --- DB & Base64 functions same as before ---
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
@@ -46,12 +30,11 @@ def init_db():
     conn.commit()
     return conn
 
-# --- 4. IMAGE TO TEXT CONVERTER ---
 def image_to_base64(image_path):
     with open(image_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- 5. CORE PROCESSING ENGINE ---
+# --- Kotha Processing Engine ---
 def process_batch():
     images = glob.glob(os.path.join(MEMORY_DIR, "*.png"))
     
@@ -59,7 +42,7 @@ def process_batch():
         print(f"[{time.strftime('%H:%M:%S')}] Waiting for images... ({len(images)}/{IMAGE_THRESHOLD})")
         return
 
-    print(f"\n[*] Threshold reached! Processing {len(images)} screenshots...")
+    print(f"\n[*] Threshold reached! Processing up to 3 screenshots...")
     conn = init_db()
     c = conn.cursor()
     
@@ -68,9 +51,10 @@ def process_batch():
             logs = json.load(f)
     except (json.JSONDecodeError, FileNotFoundError):
         logs = []
+
+    # Process only max 3 logs to avoid lag
     MAX_PROCESS = 3
     logs_to_process = logs[:MAX_PROCESS]
-    
     logs_to_keep = logs[MAX_PROCESS:]
 
     for log in logs_to_process:
@@ -85,23 +69,28 @@ def process_batch():
         y = log['details'].get('y', 0)
         timestamp = log['timestamp']
         
-        # PROMPT to Qwen-VL
         prompt = f"Look at this screenshot of '{app_name}'. The user clicked at X: {x}, Y: {y}. Briefly describe what UI element (button/menu/field) is at that location."
         
+        payload = {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                    ]
+                }
+            ]
+        }
+
         try:
-            print(f"-> Asking AI about {log['screenshot']}...")
-            response = llm.create_chat_completion(
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": prompt},
-                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
-                        ]
-                    }
-                ]
-            )
-            ai_description = response['choices'][0]['message']['content'].strip()
+            print(f"-> Sending {log['screenshot']} to Llama Server...")
+            
+            # Sending request to the server
+            response = requests.post(SERVER_URL, json=payload)
+            response.raise_for_status() # Check for HTTP errors
+            
+            ai_description = response.json()['choices'][0]['message']['content'].strip()
             print(f"   [AI Learned]: {ai_description}")
 
             # Save to SQLite Database
@@ -113,6 +102,7 @@ def process_batch():
             
         except Exception as e:
             print(f"[!] Error processing image: {e}")
+            # If server fails, keep the log for later
             logs_to_keep.append(log)
 
     conn.commit()
@@ -121,11 +111,10 @@ def process_batch():
     with open(LOG_FILE, 'w') as f:
         json.dump(logs_to_keep, f, indent=4)
         
-    print("[+] Batch complete! Data saved and images deleted.\n")
+    print("[+] Batch complete! Data saved.\n")
 
-# --- 6. MAIN LOOP ---
 if __name__ == "__main__":
     print("Continuous Brain Processor started... Press Ctrl+C to stop.")
     while True:
         process_batch()
-        time.sleep(10) # Check every 10 seconds
+        time.sleep(5) # Check every 5 seconds
