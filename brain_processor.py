@@ -33,7 +33,7 @@ def init_db():
     return conn
 
 # --- 4. SMART IMAGE COMPRESSOR ---
-def image_to_base64(image_path, max_size=(800, 800)):
+def image_to_base64(image_path, max_size=(512, 512)):
     with Image.open(image_path) as img:
         img.thumbnail(max_size, Image.Resampling.LANCZOS)
         
