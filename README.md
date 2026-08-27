@@ -12,3 +12,5 @@ pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-c
 
 
 llama-server.exe -m "models\qwen2-vl-2b-instruct-q4_k_m.gguf" --mmproj "models\mmproj-qwen2-vl-2b-instruct-f16.gguf" --port 8080 -ngl 99 -fa -t 8
+
+phase2: Phase-2 (Computer Vision Execution) upgrade
