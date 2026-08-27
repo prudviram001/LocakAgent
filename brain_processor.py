@@ -25,7 +25,7 @@ chat_handler = Llava15ChatHandler(clip_model_path=VISION_PROJECTOR)
 llm = Llama(
     model_path=MAIN_MODEL,
     chat_handler=chat_handler,
-    n_ctx=2048, # Memory for understanding the image
+    n_ctx=4096, # Memory for understanding the image
     verbose=False
 )
 print("[+] AI Brain Loaded Successfully!")
