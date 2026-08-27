@@ -83,7 +83,6 @@ def process_batch():
             app_name = raw_app_name.split("\\")[-1].strip()
         else:
             app_name = raw_app_name.strip()
-        ------------------------------------------
         
         prompt = f"Look at this screenshot of '{app_name}'. The user clicked at X: {x}, Y: {y}. Briefly describe what UI element (button/menu/field) is at that location."
         
@@ -91,11 +90,13 @@ def process_batch():
         
         # 1. STRICT PROMPT TO PREVENT VERBOSE ANSWERS
         payload = {
+            
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are an expert UI identifier. Reply with ONLY the element name in 1 to 3 words (e.g., 'Open Button', 'File Menu'). NO explanations. NO full sentences."
+                    "content": "You are a precise UI element classifier. Reply with ONLY the specific clickable item name (e.g., 'Open Button', 'Save As', 'Cancel', 'File Menu'). NEVER output the application name or window title. Maximum 2 words. NO explanations."
                 },
+                
                 {
                     "role": "user",
                     "content": [
