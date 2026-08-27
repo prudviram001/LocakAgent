@@ -32,13 +32,35 @@ def execute_action(command):
     
     conn.close()
 
+def show_memory():
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT app_name, context_description, x_coord, y_coord FROM learned_rules")
+    rows = c.fetchall()
+    conn.close()
+    
+    print("\n=======================================")
+    print("         🧠 AGENT MEMORY LIST          ")
+    print("=======================================")
+    if not rows:
+        print("[-] Inka em nerchukoledu bro, DB empty ga undi!")
+    for idx, row in enumerate(rows, 1):
+        print(f"{idx}. [App]: {row[0]}")
+        print(f"   [Learned]: {row[1]}  -->  [Coords]: X:{row[2]}, Y:{row[3]}")
+        print("-" * 40)
+    print("=======================================\n")
+
 if __name__ == "__main__":
     print("=======================================")
     print("   Jarvis Execution Mode is READY!     ")
+    print("   (Type 'memory' to see what I know)  ")
     print("=======================================")
     
     while True:
-        cmd = input("[You] Em command isthav? (or 'exit' to quit): ")
+        cmd = input("[You] Em command isthav? (or 'memory' / 'exit'): ").strip()
         if cmd.lower() == 'exit':
             break
-        execute_action(cmd)
+        elif cmd.lower() == 'memory':
+            show_memory()
+        else:
+            execute_action(cmd)
