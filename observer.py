@@ -43,7 +43,7 @@ def check_visual_difference(new_img_path, last_img_path, threshold=1.0):
 def log_action(action_type, details):
     global LAST_SAVED_IMG
     
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    timestamp = f"{time.strftime('%Y-%m-%d_%H-%M-%S')}_{int(time.time() * 1000) % 1000}"
     temp_screenshot = os.path.join(MEMORY_DIR, f"temp_{timestamp}.png")
     
     # 1. Take a temporary screenshot
