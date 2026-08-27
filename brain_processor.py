@@ -4,7 +4,9 @@ import time
 import sqlite3
 import base64
 import glob
-import requests # Kothaga idhi kavali
+import requests
+from PIL import Image
+import io
 
 # --- 1. CONFIGURATION ---
 MEMORY_DIR = "agent_memory"
@@ -30,11 +32,17 @@ def init_db():
     conn.commit()
     return conn
 
-def image_to_base64(image_path):
-    with open(image_path, "rb") as img_file:
-        return base64.b64encode(img_file.read()).decode('utf-8')
+# --- 4. SMART IMAGE COMPRESSOR ---
+def image_to_base64(image_path, max_size=(800, 800)):
+    with Image.open(image_path) as img:
+        img.thumbnail(max_size, Image.Resampling.LANCZOS)
+        
+        # Save to memory buffer as JPEG
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPEG", quality=85)
+        return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
-# --- Kotha Processing Engine ---
+
 def process_batch():
     images = glob.glob(os.path.join(MEMORY_DIR, "*.png"))
     
